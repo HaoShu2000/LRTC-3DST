@@ -6,24 +6,18 @@ dim = size(X0);
 switch missingway
       case 'Random'%%各个维度随机丢失
             Pomega=round(rand(dim(1),dim(2),dim(3)) + 0.5 - missingrate);
-      case 'Non-random2'%%在每个时间点丢失情况一样（Non-random，tuba2）
-            A=round(rand(dim(1), dim(3)) + 0.5 - missingrate);
-            B= kron(A,ones(1,dim(2)));
-            Pomega=reshape(B,[dim(1),dim(2),dim(3)]);
       case 'Non-random1'   %%在每个传感器丢失情况一样（tuba1）
             A=round(rand(dim(3), dim(2)) + 0.5 - missingrate);
             B= kron(A,ones(dim(1),1));
             Pomega=reshape(B,[dim(1),dim(2),dim(3)]);
+      case 'Non-random2'%%在每个时间点丢失情况一样（tuba2）
+            A=round(rand(dim(1), dim(3)) + 0.5 - missingrate);
+            B= kron(A,ones(1,dim(2)));
+            Pomega=reshape(B,[dim(1),dim(2),dim(3)]);     
       case 'Non-random3'%%在每天丢失数据情况完全一样（tuba3）
             A=round(rand(dim(1), dim(2)) + 0.5 - missingrate);
             Pomega=repmat(A,[1 1 dim(3)]) ;
-      case 'Non-random_1'%%所有传感器在某一段连续时间全部失去数据(Blackout)
-            A=round(rand(24*dim(3),1) + 0.5 - missingrate);
-            A = repmat(A,1,dim(2)/24); 
-            A = (reshape(A.', [], 1))';
-            A= repmat(A,dim(1),1);
-            Pomega=Fold(A,dim,1);
-
+     
 end
 Pomegac=1-Pomega;
 tol        = 1e-3; 
@@ -65,7 +59,7 @@ while iter<max_iter
     iter = iter + 1;  
     Xk = X;
     Ek = K;
-    %% Update X -- solve TV by FFT 
+    %% Update X 
     H = zeros(dim);
     for i=1:3
         H=H+nmodeproduct(G{i}-M{i}/mu,DD{i}',i);
@@ -84,7 +78,7 @@ while iter<max_iter
  
     
  
-    %% Updata Gi -- proximal operator of TNN
+    %% Updata G -- proximal operator of TNN
  for j=1:3
    switch nulclearnorm 
       case 'TrNN'
@@ -113,7 +107,7 @@ while iter<max_iter
     
     %% Update detail display
     if detail
-        if iter == 1 || mod(iter, 10) == 0
+        if iter == 1 || mod(iter, 20) == 0
             err = norm(dY(:),'fro');
             disp(['iter= ' num2str(iter) ', mu=' num2str(mu) ...
                    ', chg=' num2str(chg) ...
@@ -122,7 +116,7 @@ while iter<max_iter
         end
     end   
     
-    %% Update mulipliers: Lambda, Gamma, and mu
+    %% Update mulipliers: M, N, and mu
     for i=1:3
       M{i} = M{i}+mu*(nmodeproduct(X,DD{i},i)-G{i});
     end
